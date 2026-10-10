@@ -1,0 +1,22 @@
+{
+  "name": "cleanloop-backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/tests/**/*.test.js",
+    "seed": "tsc -p tsconfig.json && node dist/scripts/seed.js"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.758.0",
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/lib-dynamodb": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "cleanloop-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CleanLoop MVP: Track, Clean, Prevent, Repeat.",
+  "scripts": {
+    "test": "cd backend && npm test",
+    "build:backend": "cd backend && npm run build",
+    "build:infra": "cd infra && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:infra && npm run build:frontend",
+    "synth": "cd infra && npx cdk synth",
+    "deploy:infra": "cd infra && npx cdk deploy --require-approval never",
+    "seed": "cd backend && npm run seed",
+    "dev": "cd frontend && npm run dev"
+  },
+  "keywords": [
+    "cleanloop",
+    "aws",
+    "serverless",
+    "nextjs",
+    "dynamodb",
+    "cognito"
+  ],
+  "author": "CleanLoop Team",
+  "license": "UNLICENSED"
+}

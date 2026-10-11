@@ -1,0 +1,10 @@
+{
+  "CleanLoopStack": {
+    "UserPoolClientId": "55r66d5jql0tkadmkl9so4h3gc",
+    "ApiGatewayUrl": "https://xavsz1z4jb.execute-api.ap-south-1.amazonaws.com/prod/",
+    "TableName": "CleanLoopTable",
+    "CleanLoopApiEndpoint634B740D": "https://xavsz1z4jb.execute-api.ap-south-1.amazonaws.com/prod/",
+    "UserPoolId": "ap-south-1_MySWlOjWE",
+    "BucketName": "cleanloopstack-cleanloopmediabucketd3da526a-nua4qdnlp9hn"
+  }
+}

@@ -4,8 +4,6 @@
 
 CleanLoop connects waste reports, cleanup activity, follow-up observations, and recurring hotspots to make environmental problems easier to understand.
 
-> ⚠️ **Notice**: CleanLoop is currently under development. This MVP proves deterministic recurrence tracking and does not claim environmental impact.
-
 ---
 
 ## 1. MVP Core Workflow
@@ -25,6 +23,10 @@ Admin Dashboard → Recurring Hotspot Identified + Chronological Timeline
 ---
 
 ## 2. Enterprise System Architecture
+
+![CleanLoop Enterprise Architecture Diagram](docs/enterprise-architecture-diagram.jpg)
+
+### Interactive System Topology
 
 ```mermaid
 flowchart TB

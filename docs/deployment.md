@@ -1,6 +1,7 @@
-# CleanLoop MVP: AWS Serverless Deployment Guide (Phase 11)
+# CleanLoop MVP: AWS Serverless Deployment Guide
 
 This guide walks through deploying the CleanLoop MVP to a live AWS environment using AWS CDK.
+For the complete step-by-step production deployment manual with AWS CLI user creation scripts and AWS Amplify instructions, see [AWS_DEPLOYMENT_GUIDE.md](file:///c:/Users/Devesh%20arya/OneDrive/Desktop/Cleanloop/AWS_DEPLOYMENT_GUIDE.md).
 
 ---
 

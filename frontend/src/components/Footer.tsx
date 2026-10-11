@@ -10,8 +10,12 @@ export default function Footer() {
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center">
-                <Recycle className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-white border border-slate-700 overflow-hidden flex items-center justify-center p-0.5">
+                <img
+                  src="/favicon.ico.png"
+                  alt="CleanLoop Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-xl font-bold text-white tracking-tight">CleanLoop</span>
               <span className="text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">
@@ -21,10 +25,6 @@ export default function Footer() {
             <p className="text-sm text-slate-400 max-w-md leading-relaxed">
               CleanLoop connects waste reports, cleanup activity, follow-up observations, and recurring hotspots to make environmental problems easier to understand.
             </p>
-            <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-lg text-xs text-amber-300 max-w-lg">
-              <span className="font-semibold block mb-0.5">⚠️ Project Notice:</span>
-              CleanLoop is currently under development. Recurrence indicates repeated observations. It does not establish the cause of the waste. No environmental claims are made.
-            </div>
           </div>
 
           {/* Core MVP Navigation */}

@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import WorkflowSlideShow from '@/components/WorkflowSlideShow';
 import {
   AlertTriangle,
   ArrowRight,
@@ -16,20 +17,11 @@ import {
   Clock,
   CheckCircle2,
   FileText,
-  AlertCircle,
 } from 'lucide-react';
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col w-full">
-      {/* Top Banner Notice */}
-      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-center text-xs sm:text-sm text-amber-900 font-medium flex items-center justify-center gap-2">
-        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-        <span>
-          <strong>CleanLoop is currently under development.</strong> This MVP proves deterministic recurrence tracking and does not claim environmental impact.
-        </span>
-      </div>
-
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/60 via-white to-slate-50 pt-16 pb-20 md:pt-24 md:pb-28 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -92,6 +84,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Interactive Sliding Show: What CleanLoop Solves & How It Works After Clean */}
+      <WorkflowSlideShow />
 
       {/* Section 1: The Problem */}
       <section className="py-16 md:py-24 bg-white border-b border-slate-200">
@@ -409,37 +404,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Section 6: Current Project Status */}
+      {/* Call to Action Section */}
       <section className="py-16 bg-slate-100/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center space-y-4">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold uppercase tracking-wider">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Section 6: Current Project Status
-            </div>
-
             <h3 className="text-2xl font-bold text-slate-900">
-              CleanLoop is currently under development.
+              Ready to Break the Waste Cycle?
             </h3>
 
             <p className="text-sm text-slate-600 leading-relaxed max-w-xl mx-auto">
-              This system is an engineering MVP designed strictly to demonstrate data persistence and deterministic workflow execution across Amazon Cognito, API Gateway, AWS Lambda, Amazon DynamoDB, and Amazon S3.
-            </p>
-
-            <p className="text-xs text-slate-500 italic">
-              Recurrence indicates repeated observations. It does not establish the root cause of the waste. No environmental claims are made.
+              Track incidents, dispatch cleanup crews, and monitor chronic campus hotspots in real time with CleanLoop.
             </p>
 
             <div className="pt-4 flex justify-center gap-3">
               <Link
                 href="/dashboard"
-                className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition"
+                className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition shadow-sm"
               >
                 Go to Dashboard
               </Link>
               <Link
                 href="/report"
-                className="px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition shadow-sm shadow-emerald-600/20"
               >
                 Submit Report
               </Link>

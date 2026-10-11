@@ -58,8 +58,12 @@ export default function Navbar() {
         <div className="flex justify-between h-16 items-center">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:bg-emerald-700 transition">
-              <Recycle className="w-6 h-6 text-emerald-100" />
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shadow-sm group-hover:border-emerald-500 transition p-1">
+              <img
+                src="/favicon.ico.png"
+                alt="CleanLoop Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">

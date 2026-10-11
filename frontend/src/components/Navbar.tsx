@@ -75,7 +75,7 @@ export default function Navbar() {
                 </span>
               </span>
               <span className="text-[11px] text-slate-500 -mt-0.5 hidden sm:block">
-                Campus Environmental Waste Platform
+                Closing the Loop. Cleaning the World
               </span>
             </div>
           </Link>

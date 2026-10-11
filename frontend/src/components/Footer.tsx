@@ -104,7 +104,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-slate-800 text-center text-[11px] text-slate-500">
-          CleanLoop • Campus Environmental Waste Operations & Recurrence Engine
+          CleanLoop • Closing the Loop. Cleaning the World
         </div>
       </div>
     </footer>

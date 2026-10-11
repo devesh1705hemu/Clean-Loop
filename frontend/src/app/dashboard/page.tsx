@@ -190,7 +190,7 @@ export default function DashboardPage() {
             Operations Workspace
           </div>
           <div className="mt-1 font-extrabold text-slate-900 text-base flex items-center gap-2">
-            <span>CleanLoop Campus</span>
+            <span>CleanLoop</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
           <p className="text-xs text-slate-500 mt-0.5">Real-time AWS DynamoDB Sync</p>
@@ -254,7 +254,7 @@ export default function DashboardPage() {
           >
             <span className="flex items-center gap-2.5">
               <MapPin className="w-4 h-4 text-slate-400" />
-              <span>Campus Hotspots</span>
+              <span>Hotspots</span>
             </span>
             <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded font-bold">
               {analytics?.summary.recurringHotspots || 0} Recur

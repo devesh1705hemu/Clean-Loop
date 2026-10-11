@@ -22,11 +22,12 @@ export const metadata: Metadata = {
     'Track waste from report → cleanup → follow-up → recurrence → dashboard with deterministic verification.',
   icons: {
     icon: [
+      { url: '/favicon.png', type: 'image/png' },
       { url: '/favicon.ico.png', type: 'image/png' },
       { url: '/favicon.ico' },
     ],
-    shortcut: '/favicon.ico.png',
-    apple: '/favicon.ico.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
 };
 

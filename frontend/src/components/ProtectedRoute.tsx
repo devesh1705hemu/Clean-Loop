@@ -15,7 +15,7 @@ export default function ProtectedRoute({
   children,
   allowedRoles,
 }: ProtectedRouteProps) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, switchRole, login } = useAuth();
 
   if (isLoading) {
     return (
@@ -28,7 +28,7 @@ export default function ProtectedRoute({
     );
   }
 
-  // If not authenticated, require login
+  // If not authenticated, offer quick demo login or full sign in
   if (!isAuthenticated || !user) {
     return (
       <div className="flex-1 flex items-center justify-center p-6 min-h-[60vh]">
@@ -36,16 +36,45 @@ export default function ProtectedRoute({
           <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center mx-auto">
             <LogIn className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Authentication Required</h2>
+          <h2 className="text-xl font-bold text-slate-900">Sign In Required</h2>
           <p className="text-xs text-slate-600 leading-relaxed">
-            This page requires an active Amazon Cognito session. Please sign in to access this CleanLoop workflow.
+            This operational module requires an active session. Choose a 1-click hackathon role below or sign in with your credentials.
           </p>
-          <div className="pt-2">
+
+          <div className="space-y-2 pt-2">
+            <button
+              onClick={() => login('student.dev@university.edu', 'CleanLoop2026!', 'STUDENT')}
+              className="w-full py-2.5 px-4 rounded-xl bg-forest-700 hover:bg-forest-800 text-white font-bold text-xs shadow-xs transition"
+            >
+              Sign In as Student Observer
+            </button>
+            <button
+              onClick={() => login('cleanup.team@university.edu', 'CleanLoop2026!', 'CLEANUP_TEAM')}
+              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
+            >
+              Sign In as Cleanup Team
+            </button>
+            <button
+              onClick={() => login('admin.lead@university.edu', 'CleanLoop2026!', 'ADMIN')}
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs shadow-xs transition"
+            >
+              Sign In as Administrator
+            </button>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-3">
             <Link
               href="/login"
-              className="w-full inline-flex justify-center py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition"
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline"
             >
-              Sign In with Cognito
+              Custom Login
+            </Link>
+            <span className="text-slate-300">•</span>
+            <Link
+              href="/dashboard"
+              className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+            >
+              Back to Dashboard
             </Link>
           </div>
         </div>
@@ -61,14 +90,27 @@ export default function ProtectedRoute({
           <div className="w-12 h-12 bg-red-100 text-red-700 rounded-xl flex items-center justify-center mx-auto">
             <ShieldAlert className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Access Denied (403)</h2>
+          <h2 className="text-xl font-bold text-slate-900">Role Elevation Required</h2>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Your current Cognito group is <strong className="text-slate-900 font-mono">[{user.role}]</strong>.
-            This action requires one of: <strong className="text-emerald-800 font-mono">[{allowedRoles.join(', ')}]</strong>.
+            Your current active role is <strong className="text-slate-900 font-mono">[{user.role}]</strong>.
+            This workflow requires: <strong className="text-emerald-800 font-mono">[{allowedRoles.join(', ')}]</strong>.
           </p>
           <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-[11px] text-red-800 text-left">
-            Backend authorization enforces these permissions at API Gateway and Lambda. Unauthorized requests will be rejected.
+            CleanLoop allows 1-click role switching for hackathon evaluation:
           </div>
+
+          <div className="space-y-2 pt-1">
+            {allowedRoles.map((role) => (
+              <button
+                key={role}
+                onClick={() => switchRole(role)}
+                className="w-full py-2.5 px-4 rounded-xl bg-forest-700 hover:bg-forest-800 text-white font-bold text-xs shadow-xs transition"
+              >
+                Switch Role to {role} & Continue
+              </button>
+            ))}
+          </div>
+
           <div className="pt-2 flex justify-center gap-3">
             <Link
               href="/dashboard"

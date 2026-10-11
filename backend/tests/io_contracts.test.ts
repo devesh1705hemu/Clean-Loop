@@ -178,7 +178,7 @@ test('API Input / Output Contract Test Suite (Section 18 & 23)', async (t) => {
     const body = JSON.parse(output.body);
     assert.equal(body.success, true);
     assert.equal(Array.isArray(body.data), true);
-    assert.equal(body.data.length, 5);
+    assert.equal(body.data.length, 7);
 
     const hotspotIds = body.data.map((h: { hotspotId: string }) => h.hotspotId);
     assert.deepEqual(hotspotIds, [
@@ -187,6 +187,8 @@ test('API Input / Output Contract Test Suite (Section 18 & 23)', async (t) => {
       'HOTSPOT-003',
       'HOTSPOT-004',
       'HOTSPOT-005',
+      'HOTSPOT-006',
+      'HOTSPOT-007',
     ]);
   });
 

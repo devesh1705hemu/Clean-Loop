@@ -35,22 +35,29 @@ export default function IncidentsPage() {
     let isMounted = true;
     setIsLoading(true);
 
-    const local = getLocalIncidents();
-    if (local.length > 0) {
-      setIncidents(local);
-    }
-
-    api.getIncidents().then((res) => {
-      if (isMounted) {
-        if (res.success && res.data) {
-          setIncidents(res.data);
-        }
-        setIsLoading(false);
+    const loadData = () => {
+      const local = getLocalIncidents();
+      if (local.length > 0) {
+        setIncidents(local);
       }
-    });
+
+      api.getIncidents().then((res) => {
+        if (isMounted) {
+          if (res.success && res.data) {
+            setIncidents(res.data);
+          }
+          setIsLoading(false);
+        }
+      });
+    };
+
+    loadData();
+
+    window.addEventListener('cleanloop-data-change', loadData);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('cleanloop-data-change', loadData);
     };
   }, []);
 

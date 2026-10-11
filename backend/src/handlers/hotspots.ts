@@ -61,6 +61,28 @@ const PREDEFINED_HOTSPOTS = [
     createdAt: '2026-10-01T08:00:00Z',
     updatedAt: '2026-10-01T08:00:00Z',
   },
+  {
+    hotspotId: 'HOTSPOT-006',
+    name: 'Sports Complex Plaza',
+    description: 'Outdoor bleachers and athletic arena pathway perimeter',
+    latitude: 28.5472,
+    longitude: 77.196,
+    area: 'Athletics & Recreation',
+    status: 'ACTIVE',
+    createdAt: '2026-10-01T08:00:00Z',
+    updatedAt: '2026-10-01T08:00:00Z',
+  },
+  {
+    hotspotId: 'HOTSPOT-007',
+    name: 'Innovation Hub Lawn',
+    description: 'Engineering and startup incubator lawn with solar charging benches',
+    latitude: 28.5448,
+    longitude: 77.1952,
+    area: 'Innovation Precinct',
+    status: 'ACTIVE',
+    createdAt: '2026-10-01T08:00:00Z',
+    updatedAt: '2026-10-01T08:00:00Z',
+  },
 ];
 
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {

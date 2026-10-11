@@ -150,6 +150,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
+
+    const handleDataChange = () => {
+      loadDashboardData();
+    };
+
+    window.addEventListener('cleanloop-data-change', handleDataChange);
+    return () => {
+      window.removeEventListener('cleanloop-data-change', handleDataChange);
+    };
   }, [user?.email, currentRole]);
 
   // Filtered incidents for the recent incidents table

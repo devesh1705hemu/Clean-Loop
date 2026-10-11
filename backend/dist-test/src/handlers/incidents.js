@@ -6,7 +6,7 @@ const dynamo_1 = require("../services/dynamo");
 const response_1 = require("../utils/response");
 const logger_1 = require("../utils/logger");
 const VALID_CATEGORIES = ['Plastic', 'Food Waste', 'Paper', 'Glass', 'Mixed Waste', 'Other'];
-const VALID_HOTSPOTS = ['HOTSPOT-001', 'HOTSPOT-002', 'HOTSPOT-003', 'HOTSPOT-004', 'HOTSPOT-005'];
+const VALID_HOTSPOTS = ['HOTSPOT-001', 'HOTSPOT-002', 'HOTSPOT-003', 'HOTSPOT-004', 'HOTSPOT-005', 'HOTSPOT-006', 'HOTSPOT-007'];
 async function handler(event) {
     const method = event.httpMethod;
     const path = event.path;

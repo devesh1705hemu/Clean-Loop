@@ -1,17 +1,19 @@
 @import "tailwindcss";
 
+@theme {
+  --color-forest-600: #16a34a;
+  --color-forest-700: #15803d;
+  --color-forest-800: #166534;
+  --color-forest-900: #14532d;
+  --color-forest-950: #052e16;
+}
+
 @layer base {
   :root {
     --background: #f8fafc;
     --foreground: #0f172a;
-    --forest-900: #064e3b;
-    --forest-800: #14532d;
-    --forest-700: #166534;
-    --forest-600: #15803d;
-    --emerald-500: #10b981;
-    --emerald-600: #059669;
-    --brand-primary: #166534;
-    --brand-primary-hover: #14532d;
+    --brand-primary: #15803d;
+    --brand-primary-hover: #166534;
     --brand-secondary: #059669;
     --brand-surface: #ffffff;
     --brand-border: #e2e8f0;
@@ -46,6 +48,6 @@
   outline-offset: 2px;
 }
 .focus-ring:focus-visible {
-  outline: 2px solid #166534;
+  outline: 2px solid #15803d;
   outline-offset: 2px;
 }

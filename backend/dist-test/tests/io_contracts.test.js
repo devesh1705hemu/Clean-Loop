@@ -160,7 +160,7 @@ function createMockEvent(options) {
         const body = JSON.parse(output.body);
         strict_1.default.equal(body.success, true);
         strict_1.default.equal(Array.isArray(body.data), true);
-        strict_1.default.equal(body.data.length, 5);
+        strict_1.default.equal(body.data.length, 7);
         const hotspotIds = body.data.map((h) => h.hotspotId);
         strict_1.default.deepEqual(hotspotIds, [
             'HOTSPOT-001',
@@ -168,6 +168,8 @@ function createMockEvent(options) {
             'HOTSPOT-003',
             'HOTSPOT-004',
             'HOTSPOT-005',
+            'HOTSPOT-006',
+            'HOTSPOT-007',
         ]);
     });
     // -------------------------------------------------------------

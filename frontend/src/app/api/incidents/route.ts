@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Incident, WASTE_CATEGORIES } from '@/types';
 
-const VALID_HOTSPOTS = ['HOTSPOT-001', 'HOTSPOT-002', 'HOTSPOT-003', 'HOTSPOT-004', 'HOTSPOT-005'];
+const VALID_HOTSPOTS = ['HOTSPOT-001', 'HOTSPOT-002', 'HOTSPOT-003', 'HOTSPOT-004', 'HOTSPOT-005', 'HOTSPOT-006', 'HOTSPOT-007'];
 
 // In-memory store for server runtime
 const IN_MEMORY_INCIDENTS: Incident[] = [

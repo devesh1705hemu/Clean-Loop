@@ -48,17 +48,25 @@ function CleanupQueue() {
   // Sync latest incidents from backend / local persistence
   useEffect(() => {
     let isMounted = true;
-    const local = getLocalIncidents();
-    if (local.length > 0) {
-      setTasks(local);
-    }
-    api.getIncidents().then((res) => {
-      if (isMounted && res.success && res.data) {
-        setTasks(res.data);
+
+    const loadTasks = () => {
+      const local = getLocalIncidents();
+      if (local.length > 0) {
+        setTasks(local);
       }
-    });
+      api.getIncidents().then((res) => {
+        if (isMounted && res.success && res.data) {
+          setTasks(res.data);
+        }
+      });
+    };
+
+    loadTasks();
+    window.addEventListener('cleanloop-data-change', loadTasks);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('cleanloop-data-change', loadTasks);
     };
   }, []);
 

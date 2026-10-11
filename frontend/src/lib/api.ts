@@ -14,7 +14,7 @@ import {
 } from '@/types';
 import { cognitoAuth } from './cognito';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 
 function getAuthHeaders(): HeadersInit {
   const session = cognitoAuth.getCurrentSession();
@@ -25,6 +25,24 @@ function getAuthHeaders(): HeadersInit {
     headers['Authorization'] = `Bearer ${session.idToken || session.token}`;
   }
   return headers;
+}
+
+async function safeFetch<T>(
+  url: string,
+  options?: RequestInit
+): Promise<ApiResponse<T> | null> {
+  try {
+    const res = await fetch(url, options);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.success !== false || data.data !== undefined)) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn(`[CleanLoop API] Network error calling ${url}, falling back:`, err);
+  }
+  return null;
 }
 
 export interface CreateIncidentPayload {
@@ -122,9 +140,10 @@ export function getLocalIncidents(): Incident[] {
 
 export function saveLocalIncident(incident: Incident): void {
   if (typeof window === 'undefined') return;
-  const current = getLocalIncidents();
+  const current = getLocalIncidents().filter((i) => i.incidentId !== incident.incidentId);
   const updated = [incident, ...current];
   localStorage.setItem(LOCAL_INCIDENTS_STORAGE_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new Event('cleanloop-data-change'));
 }
 
 export function updateLocalIncidentStatus(incidentId: string, status: IncidentStatus): Incident | null {
@@ -143,6 +162,7 @@ export function updateLocalIncidentStatus(incidentId: string, status: IncidentSt
     return inc;
   });
   localStorage.setItem(LOCAL_INCIDENTS_STORAGE_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new Event('cleanloop-data-change'));
   return updatedItem;
 }
 
@@ -174,9 +194,10 @@ export function getLocalCleanups(): CleanupRecord[] {
 
 export function saveLocalCleanup(record: CleanupRecord): void {
   if (typeof window === 'undefined') return;
-  const current = getLocalCleanups();
+  const current = getLocalCleanups().filter((c) => c.cleanupId !== record.cleanupId);
   const updated = [record, ...current];
   localStorage.setItem(LOCAL_CLEANUPS_STORAGE_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new Event('cleanloop-data-change'));
 }
 
 export function getLocalFollowUps(): FollowUpRecord[] {
@@ -217,9 +238,10 @@ export function getLocalFollowUps(): FollowUpRecord[] {
 
 export function saveLocalFollowUp(record: FollowUpRecord): void {
   if (typeof window === 'undefined') return;
-  const current = getLocalFollowUps();
+  const current = getLocalFollowUps().filter((f) => f.followUpId !== record.followUpId);
   const updated = [record, ...current];
   localStorage.setItem(LOCAL_FOLLOWUPS_STORAGE_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new Event('cleanloop-data-change'));
 }
 
 // Deterministic recurrence calculation helper matching backend services/recurrence.ts
@@ -265,36 +287,12 @@ export function calculateLocalRecurrence(hotspotId: string): RecurrenceMetrics {
 export const api = {
   // 1. INCIDENTS
   createIncident: async (payload: CreateIncidentPayload): Promise<ApiResponse<Incident>> => {
-    if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/incidents`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/incidents', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const json = await response.json();
-        saveLocalIncident(json.data);
-        return json;
-      }
-    } catch {
-      // Fallback
-    }
-
     const session = cognitoAuth.getCurrentSession();
     const timestamp = new Date().toISOString();
     const newIncident: Incident = {
       incidentId: `INC-${Date.now().toString().slice(-6)}`,
       hotspotId: payload.hotspotId,
-      reportedBy: session?.email || 'student.anonymous@cleanloop.internal',
+      reportedBy: session?.email || 'student.dev@university.edu',
       reportedAt: timestamp,
       wasteCategory: payload.wasteCategory,
       description: payload.description,
@@ -305,7 +303,29 @@ export const api = {
       updatedAt: timestamp,
     };
 
+    // Always immediately save into local persistent store so it is 100% guaranteed to exist
     saveLocalIncident(newIncident);
+
+    // If API_BASE_URL is reachable, also sync to remote AWS API Gateway
+    if (API_BASE_URL) {
+      safeFetch<Incident>(`${API_BASE_URL}/incidents`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      }).then((live) => {
+        if (live && live.data) {
+          saveLocalIncident(live.data);
+        }
+      });
+    }
+
+    // Also mirror to local Next.js route handler
+    safeFetch<Incident>('/api/incidents', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
     return {
       success: true,
       data: newIncident,
@@ -314,30 +334,25 @@ export const api = {
   },
 
   getIncidents: async (filter?: { status?: string; hotspotId?: string; reportedBy?: string }): Promise<ApiResponse<Incident[]>> => {
+    let localItems = getLocalIncidents();
+
     if (API_BASE_URL) {
       const params = new URLSearchParams();
       if (filter?.status) params.append('status', filter.status);
       const url = `${API_BASE_URL}/incidents${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, {
+      const live = await safeFetch<Incident[]>(url, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/incidents', {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        return response.json();
+      if (live && live.data && Array.isArray(live.data)) {
+        const localIds = new Set(localItems.map((i) => i.incidentId));
+        // Merge remote with local items
+        const remoteNonLocal = live.data.filter((i) => !localIds.has(i.incidentId));
+        localItems = [...localItems, ...remoteNonLocal];
       }
-    } catch {
-      // Fallback
     }
 
-    let items = getLocalIncidents();
+    let items = [...localItems];
     if (filter?.status && filter.status !== 'ALL') {
       items = items.filter((i) => i.status === filter.status);
     }
@@ -357,11 +372,13 @@ export const api = {
 
   getIncidentById: async (id: string): Promise<ApiResponse<Incident>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/incidents/${id}`, {
+      const live = await safeFetch<Incident>(`${API_BASE_URL}/incidents/${id}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
+      if (live && live.data) {
+        return live;
+      }
     }
 
     const items = getLocalIncidents();
@@ -381,16 +398,16 @@ export const api = {
   },
 
   updateIncidentStatus: async (id: string, status: IncidentStatus): Promise<ApiResponse<Incident>> => {
+    const updated = updateLocalIncidentStatus(id, status);
+
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/incidents/${id}`, {
+      safeFetch<Incident>(`${API_BASE_URL}/incidents/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status }),
       });
-      return response.json();
     }
 
-    const updated = updateLocalIncidentStatus(id, status);
     if (!updated) {
       return {
         success: false,
@@ -407,31 +424,6 @@ export const api = {
 
   // 2. CLEANUPS (Section 11)
   createCleanup: async (payload: CreateCleanupPayload): Promise<ApiResponse<CleanupRecord>> => {
-    if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/cleanups`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/cleanups', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const json = await response.json();
-        saveLocalCleanup(json.data);
-        updateLocalIncidentStatus(payload.incidentId, 'CLEANED');
-        return json;
-      }
-    } catch {
-      // Fallback
-    }
-
     const session = cognitoAuth.getCurrentSession();
     const timestamp = new Date().toISOString();
     const cleanupRecord: CleanupRecord = {
@@ -450,6 +442,14 @@ export const api = {
     saveLocalCleanup(cleanupRecord);
     updateLocalIncidentStatus(payload.incidentId, 'CLEANED');
 
+    if (API_BASE_URL) {
+      safeFetch<CleanupRecord>(`${API_BASE_URL}/cleanups`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+    }
+
     return {
       success: true,
       data: cleanupRecord,
@@ -458,59 +458,28 @@ export const api = {
   },
 
   getCleanups: async (): Promise<ApiResponse<CleanupRecord[]>> => {
-    if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/cleanups`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      return response.json();
-    }
+    let localItems = getLocalCleanups();
 
-    try {
-      const response = await fetch('/api/cleanups', {
+    if (API_BASE_URL) {
+      const live = await safeFetch<CleanupRecord[]>(`${API_BASE_URL}/cleanups`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      if (response.ok) {
-        return response.json();
+      if (live && live.data && Array.isArray(live.data)) {
+        const localIds = new Set(localItems.map((c) => c.cleanupId));
+        localItems = [...localItems, ...live.data.filter((c) => !localIds.has(c.cleanupId))];
       }
-    } catch {
-      // Fallback
     }
 
     return {
       success: true,
-      data: getLocalCleanups(),
+      data: localItems,
       message: 'Cleanups retrieved',
     };
   },
 
   // 3. FOLLOW-UPS (Section 12)
   createFollowUp: async (payload: CreateFollowUpPayload): Promise<ApiResponse<FollowUpRecord>> => {
-    if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/followups`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/followups', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const json = await response.json();
-        saveLocalFollowUp(json.data);
-        return json;
-      }
-    } catch {
-      // Fallback
-    }
-
     const session = cognitoAuth.getCurrentSession();
     const timestamp = new Date().toISOString();
     const newRecord: FollowUpRecord = {
@@ -527,6 +496,15 @@ export const api = {
     };
 
     saveLocalFollowUp(newRecord);
+
+    if (API_BASE_URL) {
+      safeFetch<FollowUpRecord>(`${API_BASE_URL}/followups`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+    }
+
     return {
       success: true,
       data: newRecord,
@@ -535,35 +513,27 @@ export const api = {
   },
 
   getFollowUps: async (hotspotId?: string): Promise<ApiResponse<FollowUpRecord[]>> => {
+    let localItems = getLocalFollowUps();
+
     if (API_BASE_URL) {
       const url = `${API_BASE_URL}/followups${hotspotId ? `?hotspotId=${hotspotId}` : ''}`;
-      const response = await fetch(url, {
+      const live = await safeFetch<FollowUpRecord[]>(url, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/followups', {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        return response.json();
+      if (live && live.data && Array.isArray(live.data)) {
+        const localIds = new Set(localItems.map((f) => f.followUpId));
+        localItems = [...localItems, ...live.data.filter((f) => !localIds.has(f.followUpId))];
       }
-    } catch {
-      // Fallback
     }
 
-    let items = getLocalFollowUps();
     if (hotspotId && hotspotId !== 'ALL') {
-      items = items.filter((f) => f.hotspotId === hotspotId);
+      localItems = localItems.filter((f) => f.hotspotId === hotspotId);
     }
 
     return {
       success: true,
-      data: items,
+      data: localItems,
       message: 'Follow-ups retrieved',
     };
   },
@@ -571,11 +541,13 @@ export const api = {
   // 4. HOTSPOTS & TIMELINE (Sections 7, 13, 16)
   getHotspots: async (): Promise<ApiResponse<Hotspot[]>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/hotspots`, {
+      const live = await safeFetch<Hotspot[]>(`${API_BASE_URL}/hotspots`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
+      if (live && live.data) {
+        return live;
+      }
     }
 
     return {
@@ -587,11 +559,13 @@ export const api = {
 
   getHotspotById: async (id: string): Promise<ApiResponse<Hotspot>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/hotspots/${id}`, {
+      const live = await safeFetch<Hotspot>(`${API_BASE_URL}/hotspots/${id}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
+      if (live && live.data) {
+        return live;
+      }
     }
 
     const found = PREDEFINED_HOTSPOTS.find((h) => h.hotspotId === id);
@@ -611,20 +585,13 @@ export const api = {
 
   getHotspotRecurrence: async (hotspotId: string): Promise<ApiResponse<RecurrenceMetrics>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/hotspots/${hotspotId}/recurrence`, {
+      const live = await safeFetch<RecurrenceMetrics>(`${API_BASE_URL}/hotspots/${hotspotId}/recurrence`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch(`/api/hotspots/${hotspotId}/recurrence`);
-      if (response.ok) {
-        return response.json();
+      if (live && live.data && (live.data.totalIncidents > 0 || live.data.recurrenceCount > 0)) {
+        return live;
       }
-    } catch {
-      // Fallback
     }
 
     return {
@@ -636,11 +603,13 @@ export const api = {
 
   getHotspotHistory: async (hotspotId: string): Promise<ApiResponse<TimelineEvent[]>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/hotspots/${hotspotId}/history`, {
+      const live = await safeFetch<TimelineEvent[]>(`${API_BASE_URL}/hotspots/${hotspotId}/history`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
+      if (live && live.data && Array.isArray(live.data) && live.data.length > 0) {
+        return live;
+      }
     }
 
     // Build timeline from actual stored incidents, cleanups, and follow-ups
@@ -734,20 +703,30 @@ export const api = {
     recentIncidents: Incident[];
   }>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/analytics/overview`, {
+      const live = await safeFetch<{
+        summary: {
+          totalReports: number;
+          totalCleanups: number;
+          pendingFollowUps: number;
+          recurringHotspots: number;
+        };
+        ranking: Array<{
+          hotspotId: string;
+          name: string;
+          incidentCount: number;
+          cleanupCount: number;
+          followUpCount: number;
+          postCleanupRecurrenceCount: number;
+          classification: string;
+        }>;
+        recentIncidents: Incident[];
+      }>(`${API_BASE_URL}/analytics/overview`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/analytics/overview');
-      if (response.ok) {
-        return response.json();
+      if (live && live.data && live.data.summary && live.data.summary.totalReports > 0) {
+        return live;
       }
-    } catch {
-      // Fallback
     }
 
     const incidents = getLocalIncidents();
@@ -791,25 +770,14 @@ export const api = {
   // 6. S3 PRESIGNED IMAGE UPLOADS (Section 10)
   requestPresignedUpload: async (payload: PresignedUploadRequest): Promise<ApiResponse<PresignedUploadResponse>> => {
     if (API_BASE_URL) {
-      const response = await fetch(`${API_BASE_URL}/uploads/presign`, {
+      const live = await safeFetch<PresignedUploadResponse>(`${API_BASE_URL}/uploads/presign`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-      return response.json();
-    }
-
-    try {
-      const response = await fetch('/api/uploads/presign', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        return response.json();
+      if (live && live.data) {
+        return live;
       }
-    } catch {
-      // Fallback
     }
 
     // Local simulation fallback

@@ -49,31 +49,38 @@ function FollowupsContent() {
   // Fetch from API and sync local
   useEffect(() => {
     let isMounted = true;
-    const local = getLocalFollowUps();
-    if (local.length > 0) {
-      setFollowups(local);
-    }
 
-    Promise.all([
-      api.getFollowUps(),
-      api.getIncidents(),
-    ]).then(([folRes, incRes]) => {
-      if (isMounted) {
-        if (folRes.success && folRes.data) {
-          setFollowups(folRes.data);
-        }
-        if (incRes.success && incRes.data) {
-          setIncidents(incRes.data);
-          if (incRes.data.length > 0 && !targetIncidentId) {
-            setTargetIncidentId(incRes.data[0].incidentId);
-            setTargetHotspotId(incRes.data[0].hotspotId);
+    const loadData = () => {
+      const local = getLocalFollowUps();
+      if (local.length > 0) {
+        setFollowups(local);
+      }
+
+      Promise.all([
+        api.getFollowUps(),
+        api.getIncidents(),
+      ]).then(([folRes, incRes]) => {
+        if (isMounted) {
+          if (folRes.success && folRes.data) {
+            setFollowups(folRes.data);
+          }
+          if (incRes.success && incRes.data) {
+            setIncidents(incRes.data);
+            if (incRes.data.length > 0 && !targetIncidentId) {
+              setTargetIncidentId(incRes.data[0].incidentId);
+              setTargetHotspotId(incRes.data[0].hotspotId);
+            }
           }
         }
-      }
-    });
+      });
+    };
+
+    loadData();
+    window.addEventListener('cleanloop-data-change', loadData);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('cleanloop-data-change', loadData);
     };
   }, []);
 

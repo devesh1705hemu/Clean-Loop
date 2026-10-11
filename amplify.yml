@@ -1,4 +1,6 @@
-﻿version: 1
+﻿
+@'
+version: 1
 applications:
   - appRoot: frontend
     frontend:
@@ -17,3 +19,4 @@ applications:
         paths:
           - node_modules/**/*
           - .next/cache/**/*
+'@ | Set-Content .\amplify.yml -Encoding utf8

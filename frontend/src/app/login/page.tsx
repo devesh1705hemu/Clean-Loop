@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn, Lock, Mail, Shield, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
+import { LogIn, Lock, Mail, Shield, AlertCircle, ArrowRight, UserPlus, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<UserRole>('STUDENT');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -19,7 +20,7 @@ export default function LoginPage() {
   const handleQuickDemo = (demoRole: UserRole, demoEmail: string) => {
     setRole(demoRole);
     setEmail(demoEmail);
-    setPassword('CleanLoop@2026!');
+    setPassword('CleanLoop2026!');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,13 +153,21 @@ export default function LoginPage() {
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                placeholder="Enter your account password"
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Lock, Mail, Shield, AlertCircle, CheckCircle, LogIn, ArrowRight } from 'lucide-react';
+import { UserPlus, Lock, Mail, Shield, AlertCircle, CheckCircle, LogIn, ArrowRight, Eye, EyeOff, Check, X } from 'lucide-react';
 import { UserRole } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -12,18 +12,54 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState<UserRole>('STUDENT');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Password requirement checks
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
 
-    if (password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long (Cognito policy).');
+    if (!hasMinLength) {
+      setErrorMessage('Password must be at least 8 characters long.');
+      setIsLoading(false);
+      return;
+    }
+    if (!hasUppercase) {
+      setErrorMessage('Password must contain at least one uppercase letter (A-Z).');
+      setIsLoading(false);
+      return;
+    }
+    if (!hasLowercase) {
+      setErrorMessage('Password must contain at least one lowercase letter (a-z).');
+      setIsLoading(false);
+      return;
+    }
+    if (!hasNumber) {
+      setErrorMessage('Password must contain at least one number (0-9).');
+      setIsLoading(false);
+      return;
+    }
+    if (!hasSpecial) {
+      setErrorMessage('Password must contain at least one special character (!@#$%^&*).');
+      setIsLoading(false);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match. Please verify and re-enter.');
       setIsLoading(false);
       return;
     }
@@ -33,7 +69,7 @@ export default function RegisterPage() {
       setIsSuccess(true);
       setTimeout(() => {
         router.push('/login');
-      }, 1000);
+      }, 1200);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed. Please check details.';
       setErrorMessage(msg);
@@ -120,14 +156,82 @@ export default function RegisterPage() {
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Must include uppercase, number, symbol"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+
+            {/* Live Password Strength Requirements Checklist */}
+            {password.length > 0 && (
+              <div className="mt-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200 grid grid-cols-2 gap-1 text-[11px]">
+                <div className={`flex items-center gap-1 ${hasMinLength ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  {hasMinLength ? <Check className="w-3 h-3 text-emerald-600" /> : <X className="w-3 h-3 text-slate-400" />}
+                  <span>8+ characters</span>
+                </div>
+                <div className={`flex items-center gap-1 ${hasUppercase ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  {hasUppercase ? <Check className="w-3 h-3 text-emerald-600" /> : <X className="w-3 h-3 text-slate-400" />}
+                  <span>Uppercase (A-Z)</span>
+                </div>
+                <div className={`flex items-center gap-1 ${hasLowercase ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  {hasLowercase ? <Check className="w-3 h-3 text-emerald-600" /> : <X className="w-3 h-3 text-slate-400" />}
+                  <span>Lowercase (a-z)</span>
+                </div>
+                <div className={`flex items-center gap-1 ${hasNumber && hasSpecial ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  {hasNumber && hasSpecial ? <Check className="w-3 h-3 text-emerald-600" /> : <X className="w-3 h-3 text-slate-400" />}
+                  <span>Number & symbol</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="confirmPassword">
+              Confirm Password
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                className={`w-full pl-9 pr-10 py-2.5 rounded-xl border text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 ${
+                  confirmPassword.length > 0 && !passwordsMatch
+                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/20'
+                    : confirmPassword.length > 0 && passwordsMatch
+                    ? 'border-emerald-500 focus:ring-emerald-600 bg-emerald-50/20'
+                    : 'border-slate-300 focus:ring-emerald-600'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                aria-label="Toggle confirm password visibility"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {confirmPassword.length > 0 && (
+              <p className={`mt-1 text-[11px] font-medium ${passwordsMatch ? 'text-emerald-700' : 'text-rose-600'}`}>
+                {passwordsMatch ? '✓ Passwords match' : '✕ Passwords do not match'}
+              </p>
+            )}
           </div>
 
           <div>

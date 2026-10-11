@@ -36,11 +36,20 @@ export interface AuthSession {
 const STORAGE_KEY = 'cleanloop_cognito_session';
 const REGISTERED_USERS_KEY = 'cleanloop_registered_users';
 
-interface RegisteredUserRecord {
+export interface RegisteredUserRecord {
   email: string;
+  password?: string;
   role: UserRole;
   registeredAt: string;
 }
+
+export const DEMO_CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
+  'student.dev@university.edu': { password: 'CleanLoop2026!', role: 'STUDENT' },
+  'cleanup.staff@cleanloop.internal': { password: 'CleanLoop2026!', role: 'CLEANUP_TEAM' },
+  'cleanup.team@university.edu': { password: 'CleanLoop2026!', role: 'CLEANUP_TEAM' },
+  'admin.facilities@university.edu': { password: 'CleanLoop2026!', role: 'ADMIN' },
+  'admin.lead@university.edu': { password: 'CleanLoop2026!', role: 'ADMIN' },
+};
 
 export function getRegisteredUsers(): RegisteredUserRecord[] {
   if (typeof window === 'undefined') return [];
@@ -98,11 +107,31 @@ export function createDemoCognitoToken(email: string, role: UserRole): string {
 }
 
 export const cognitoAuth = {
-  // Register user in Amazon Cognito with persistent fallback
+  // Register user in Amazon Cognito with strict password policy verification
   signUp: async (email: string, password: string, role: UserRole): Promise<{ userSub: string }> => {
-    // Save to local registry so user is guaranteed to be able to log in
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // Cognito Password Complexity Policy checks
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long.');
+    }
+    if (!/[A-Z]/.test(password)) {
+      throw new Error('Password must contain at least one uppercase letter (A-Z).');
+    }
+    if (!/[a-z]/.test(password)) {
+      throw new Error('Password must contain at least one lowercase letter (a-z).');
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new Error('Password must contain at least one number (0-9).');
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      throw new Error('Password must contain at least one special character (!@#$%^&* etc.).');
+    }
+
+    // Save to local registry with exact password for verification
     saveRegisteredUser({
-      email,
+      email: trimmedEmail,
+      password,
       role,
       registeredAt: new Date().toISOString(),
     });
@@ -111,14 +140,14 @@ export const cognitoAuth = {
     if (userPool && process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID && !COGNITO_CONFIG.userPoolId.includes('DevPool')) {
       try {
         const attributeList: CognitoUserAttribute[] = [
-          new CognitoUserAttribute({ Name: 'email', Value: email }),
+          new CognitoUserAttribute({ Name: 'email', Value: trimmedEmail }),
           new CognitoUserAttribute({ Name: 'custom:role', Value: role }),
         ];
 
         return await new Promise<{ userSub: string }>((resolve) => {
-          userPool!.signUp(email, password, attributeList, [], (err, result) => {
+          userPool!.signUp(trimmedEmail, password, attributeList, [], (err, result) => {
             if (err) {
-              console.warn('Cognito remote signUp note (proceeding with local registration):', err.message);
+              console.warn('Cognito remote signUp note:', err.message);
               resolve({ userSub: `sub-${Date.now()}` });
             } else if (result) {
               resolve({ userSub: result.userSub });
@@ -135,23 +164,25 @@ export const cognitoAuth = {
     return { userSub: `usr-${Date.now().toString().slice(-6)}` };
   },
 
-  // Authenticate user in Amazon Cognito with resilient fallback
+  // Authenticate user in Amazon Cognito with strict password check
   signIn: async (email: string, password: string, requestedRole: UserRole = 'STUDENT'): Promise<AuthSession> => {
-    // Check if the user is registered locally
-    const registered = getRegisteredUsers().find((u) => u.email.toLowerCase() === email.toLowerCase());
-    const effectiveRole = registered?.role || requestedRole;
+    const trimmedEmail = email.trim().toLowerCase();
 
-    // If live AWS Cognito is configured, attempt real authentication
+    if (!trimmedEmail || !password) {
+      throw new Error('Please enter both email and password.');
+    }
+
+    // 1. If live AWS Cognito is configured, attempt real remote authentication first
     if (userPool && process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID && !COGNITO_CONFIG.userPoolId.includes('DevPool')) {
       try {
         const liveSession = await new Promise<AuthSession>((resolve, reject) => {
           const authenticationDetails = new AuthenticationDetails({
-            Username: email,
+            Username: trimmedEmail,
             Password: password,
           });
 
           const cognitoUser = new CognitoUser({
-            Username: email,
+            Username: trimmedEmail,
             Pool: userPool!,
           });
 
@@ -164,10 +195,10 @@ export const cognitoAuth = {
                 ? 'ADMIN'
                 : groups.includes('CLEANUP_TEAM')
                 ? 'CLEANUP_TEAM'
-                : effectiveRole;
+                : requestedRole;
 
               const session: AuthSession = {
-                email,
+                email: trimmedEmail,
                 role: detectedRole,
                 token: result.getAccessToken().getJwtToken(),
                 idToken,
@@ -186,25 +217,66 @@ export const cognitoAuth = {
         });
 
         return liveSession;
-      } catch (err) {
-        console.warn('Live Cognito signIn failed, falling back to verified session:', err);
+      } catch (err: unknown) {
+        const cognitoErr = err as { code?: string; name?: string; message?: string };
+        // If AWS Cognito explicitly says incorrect password, REJECT IMMEDIATELY!
+        if (cognitoErr?.code === 'NotAuthorizedException' || cognitoErr?.name === 'NotAuthorizedException') {
+          throw new Error('Incorrect password. Please verify your credentials.');
+        }
+        // If user not confirmed or not found in AWS, check local registry below
+        console.warn('Live Cognito signIn note (evaluating credentials registry):', cognitoErr?.message);
       }
     }
 
-    // Resilient fallback: creates valid Cognito ID token session
-    const token = createDemoCognitoToken(email, effectiveRole);
-    const session: AuthSession = {
-      email,
-      role: effectiveRole,
-      token,
-      idToken: token,
-      expiresAt: Date.now() + 24 * 3600 * 1000,
-    };
+    // 2. Check locally registered users registry
+    const registered = getRegisteredUsers().find((u) => u.email.toLowerCase() === trimmedEmail);
+    if (registered) {
+      // Check password strictly!
+      if (registered.password && registered.password !== password) {
+        throw new Error('Incorrect password. Please verify and try again.');
+      }
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      const effectiveRole = registered.role || requestedRole;
+      const token = createDemoCognitoToken(trimmedEmail, effectiveRole);
+      const session: AuthSession = {
+        email: trimmedEmail,
+        role: effectiveRole,
+        token,
+        idToken: token,
+        expiresAt: Date.now() + 24 * 3600 * 1000,
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      }
+      return session;
     }
-    return session;
+
+    // 3. Check pre-set demo hackathon accounts
+    const demo = DEMO_CREDENTIALS[trimmedEmail];
+    if (demo) {
+      const isDemoPassValid = password === demo.password || password === 'CleanLoop@2026!' || password === 'CleanLoop2026!';
+      if (!isDemoPassValid) {
+        throw new Error(`Incorrect password for ${trimmedEmail}. (Demo password: CleanLoop2026!)`);
+      }
+
+      const token = createDemoCognitoToken(trimmedEmail, demo.role);
+      const session: AuthSession = {
+        email: trimmedEmail,
+        role: demo.role,
+        token,
+        idToken: token,
+        expiresAt: Date.now() + 24 * 3600 * 1000,
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      }
+      return session;
+    }
+
+    // 4. Account not found anywhere
+    throw new Error('Account not found. Please click "Create Account" to register.');
   },
 
   // Get active session from storage

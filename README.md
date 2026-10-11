@@ -241,5 +241,7 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000).
 
-### Deploy to AWS (Phase 11)
-See [docs/deployment.md](docs/deployment.md) for step-by-step instructions.
+# Blog link:
+https://builder.aws.com/content/3KX2nWqutIGMAXLX4r6ijPrqkGP/the-trash-that-came-back-building-cleanloop-with-aws-serverless-architecture
+
+

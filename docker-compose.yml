@@ -1,0 +1,110 @@
+name: cleanloop
+
+services:
+  # =========================================================================
+  # 1. CleanLoop Web Application (Next.js 16 App Router)
+  # Accessible at: http://localhost:3000
+  # =========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_USER_POOL_ID: ${NEXT_PUBLIC_USER_POOL_ID:-}
+        NEXT_PUBLIC_USER_POOL_CLIENT_ID: ${NEXT_PUBLIC_USER_POOL_CLIENT_ID:-}
+        NEXT_PUBLIC_AWS_REGION: ${NEXT_PUBLIC_AWS_REGION:-${AWS_REGION:-us-east-1}}
+        NEXT_PUBLIC_S3_BUCKET: ${NEXT_PUBLIC_S3_BUCKET:-}
+    container_name: cleanloop-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+      - NEXT_PUBLIC_USER_POOL_ID=${NEXT_PUBLIC_USER_POOL_ID:-}
+      - NEXT_PUBLIC_USER_POOL_CLIENT_ID=${NEXT_PUBLIC_USER_POOL_CLIENT_ID:-}
+      - NEXT_PUBLIC_AWS_REGION=${NEXT_PUBLIC_AWS_REGION:-${AWS_REGION:-us-east-1}}
+      - NEXT_PUBLIC_S3_BUCKET=${NEXT_PUBLIC_S3_BUCKET:-}
+    env_file:
+      - path: ./frontend/.env.local
+        required: false
+      - path: ./.env
+        required: false
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - cleanloop-network
+
+  # =========================================================================
+  # 2. DynamoDB Local (Local AWS DynamoDB Database Emulation)
+  # Accessible at: http://localhost:8000
+  # =========================================================================
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: cleanloop-dynamodb
+    restart: unless-stopped
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    working_dir: /home/dynamodblocal
+    ports:
+      - "${DYNAMODB_PORT:-8000}:8000"
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data
+    networks:
+      - cleanloop-network
+
+  # =========================================================================
+  # 3. DynamoDB Admin GUI (Visual Browser Interface for Local DynamoDB)
+  # Accessible at: http://localhost:8001
+  # =========================================================================
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: cleanloop-dynamodb-admin
+    restart: unless-stopped
+    ports:
+      - "${DYNAMODB_ADMIN_PORT:-8001}:8001"
+    environment:
+      - DDB_LOCAL_ENDPOINT=http://dynamodb-local:8000
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    depends_on:
+      - dynamodb-local
+    networks:
+      - cleanloop-network
+
+  # =========================================================================
+  # 4. Backend Automated Test & Tool Runner
+  # Run on-demand: docker compose --profile test run --rm backend-test
+  # =========================================================================
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cleanloop-backend-test
+    profiles:
+      - test
+      - tools
+    environment:
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - TABLE_NAME=${TABLE_NAME:-CleanLoopTable}
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - AWS_ACCESS_KEY_ID=dummyLocalKey
+      - AWS_SECRET_ACCESS_KEY=dummyLocalSecret
+    depends_on:
+      - dynamodb-local
+    networks:
+      - cleanloop-network
+
+networks:
+  cleanloop-network:
+    driver: bridge
+
+volumes:
+  dynamodb_data:
+    driver: local
